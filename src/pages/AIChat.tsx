@@ -4,7 +4,7 @@ import { STAGES } from '../types';
 import { Send, Trash2, MessageSquare, Building2, Users, BarChart3, CheckSquare } from 'lucide-react';
 
 export default function AIChat() {
-  const { chatMessages, addChatMessage, clearChat, companies, employees, tasks, kpis } = useStore();
+  const { chatMessages, addChatMessage, clearChat, companies, team, tasks, kpis } = useStore();
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -44,13 +44,13 @@ export default function AIChat() {
     // Overdue tasks
     if (q.includes('overdue')) {
       const overdue = tasks.filter(t => t.status !== 'done' && t.dueDate < today);
-      const byOwner = employees.map(e => ({ name: e.name, tasks: overdue.filter(t => t.assigneeId === e.id) })).filter(e => e.tasks.length > 0);
+      const byOwner = team.map(e => ({ name: e.name, tasks: overdue.filter(t => t.assigneeId === e.id) })).filter(e => e.tasks.length > 0);
       return `**Overdue Tasks (${overdue.length})**\n\n${byOwner.map(o => `**${o.name}** (${o.tasks.length} overdue):\n${o.tasks.map(t => `- ${t.title} (due ${t.dueDate})${t.companyId ? ` - ${companies.find(c => c.id === t.companyId)?.name || ''}` : ''}`).join('\n')}`).join('\n\n') || 'No overdue tasks!'}`;
     }
 
     // Employee performance
     if (q.includes('employee') && (q.includes('performance') || q.includes('behind') || q.includes('kpi'))) {
-      const results = employees.filter(e => e.status === 'active').map(e => {
+      const results = team.filter(e => e.status === 'active').map(e => {
         const empKpis = kpis.filter(k => k.ownerId === e.id);
         const empTasks = tasks.filter(t => t.assigneeId === e.id);
         const completed = empTasks.filter(t => t.status === 'done').length;
@@ -70,7 +70,7 @@ export default function AIChat() {
       });
       return `**Stale Opportunities (no contact in ${daysThreshold}+ days)**\n\n${stale.map(c => {
         const days = c.lastContactDate ? Math.floor((Date.now() - new Date(c.lastContactDate).getTime()) / 86400000) : 'never';
-        return `- **${c.name}** - Last contact: ${days === 'never' ? 'Never' : `${days} days ago`} - Stage: ${STAGES.find(s => s.key === c.stage)?.label} - Owner: ${employees.find(e => e.id === c.ownerId)?.name || 'Unassigned'}`;
+        return `- **${c.name}** - Last contact: ${days === 'never' ? 'Never' : `${days} days ago`} - Stage: ${STAGES.find(s => s.key === c.stage)?.label} - Owner: ${team.find(e => e.id === c.ownerId)?.name || 'Unassigned'}`;
       }).join('\n') || 'All companies have recent contact.'}`;
     }
 
@@ -104,7 +104,7 @@ export default function AIChat() {
     }
 
     // Default
-    return `I can help you analyse your CRM data. Try asking:\n\n- "Give me a pipeline summary"\n- "Show companies in industrial services"\n- "Which companies have high thesis fit?"\n- "Show overdue tasks by owner"\n- "How are employees performing?"\n- "Which companies have had no follow-up?"\n- "Show conversion funnel"\n- "KPI status summary"\n- "Compare Greenfield and Forge"`;
+    return `I can help you analyse your CRM data. Try asking:\n\n- "Give me a pipeline summary"\n- "Show companies in industrial services"\n- "Which companies have high thesis fit?"\n- "Show overdue tasks by owner"\n- "How are team performing?"\n- "Which companies have had no follow-up?"\n- "Show conversion funnel"\n- "KPI status summary"\n- "Compare Greenfield and Forge"`;
   };
 
   const handleSend = async () => {
@@ -121,7 +121,7 @@ export default function AIChat() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: [
-            { role: 'system', content: `You are Zenith AI, an internal analyst for a search fund CRM. You have access to the following data:\n\nCompanies (${companies.length}): ${companies.map(c => `${c.name} [${c.sector}, ${c.stage}, fit:${c.thesisFitScore}/10, rev:${c.revenue}, ebitda:${c.ebitda}]`).join('; ')}\n\nEmployees: ${employees.map(e => `${e.name} (${e.role})`).join(', ')}\n\nAnswer concisely using markdown. Reference specific data.` },
+            { role: 'system', content: `You are Zenith AI, an internal analyst for a search fund CRM. You have access to the following data:\n\nCompanies (${companies.length}): ${companies.map(c => `${c.name} [${c.sector}, ${c.stage}, fit:${c.thesisFitScore}/10, rev:${c.revenue}, ebitda:${c.ebitda}]`).join('; ')}\n\nEmployees: ${team.map(e => `${e.name} (${e.role})`).join(', ')}\n\nAnswer concisely using markdown. Reference specific data.` },
             { role: 'user', content: msg }
           ]
         }),

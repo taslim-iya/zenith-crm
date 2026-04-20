@@ -3,8 +3,8 @@ import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import Companies from './pages/Companies';
 import CompanyDetail from './pages/CompanyDetail';
-import Employees from './pages/Employees';
-import EmployeeDetail from './pages/EmployeeDetail';
+import Team from './pages/Team';
+import Brokers from './pages/Brokers';
 import KPIs from './pages/KPIs';
 import AIChat from './pages/AIChat';
 import Tasks from './pages/Tasks';
@@ -21,8 +21,8 @@ export default function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/companies" element={<Companies />} />
             <Route path="/companies/:id" element={<CompanyDetail />} />
-            <Route path="/employees" element={<Employees />} />
-            <Route path="/employees/:id" element={<EmployeeDetail />} />
+            <Route path="/team" element={<Team />} />
+            <Route path="/brokers" element={<Brokers />} />
             <Route path="/kpis" element={<KPIs />} />
             <Route path="/chat" element={<AIChat />} />
             <Route path="/tasks" element={<Tasks />} />

@@ -38,6 +38,7 @@ export default function Settings() {
             { label: 'Companies', value: companies.length },
             { label: 'Employees', value: employees.length },
             { label: 'Tasks', value: tasks.length },
+            { label: 'Brokers', value: brokers.length },
             { label: 'KPIs', value: kpis.length },
             { label: 'Active Pipeline', value: companies.filter(c => c.status === 'active').length },
             { label: 'Completed Tasks', value: tasks.filter(t => t.status === 'done').length },

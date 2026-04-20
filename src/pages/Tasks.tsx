@@ -17,7 +17,7 @@ const PRIORITY_COLORS: Record<Priority, { bg: string; text: string }> = {
 };
 
 export default function Tasks() {
-  const { tasks, employees, companies, addTask, updateTask, deleteTask } = useStore();
+  const { tasks, team, companies, addTask, updateTask, deleteTask } = useStore();
   const [filter, setFilter] = useState<string>('all');
   const [ownerFilter, setOwnerFilter] = useState<string>('all');
   const [showAdd, setShowAdd] = useState(false);
@@ -94,7 +94,7 @@ export default function Tasks() {
         </select>
         <select value={ownerFilter} onChange={e => setOwnerFilter(e.target.value)} style={{ minWidth: 120 }}>
           <option value="all">All Members</option>
-          {employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+          {team.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
         </select>
       </div>
 
@@ -106,7 +106,7 @@ export default function Tasks() {
             <div><label style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Due Date</label><input type="date" value={newTask.dueDate} onChange={e => setNewTask(p => ({...p, dueDate: e.target.value}))} style={{ width: '100%' }} /></div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginTop: 12 }}>
-            <div><label style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Assignee</label><select value={newTask.assigneeId} onChange={e => setNewTask(p => ({...p, assigneeId: e.target.value}))} style={{ width: '100%' }}><option value="">Unassigned</option>{employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}</select></div>
+            <div><label style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Assignee</label><select value={newTask.assigneeId} onChange={e => setNewTask(p => ({...p, assigneeId: e.target.value}))} style={{ width: '100%' }}><option value="">Unassigned</option>{team.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}</select></div>
             <div><label style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Company</label><select value={newTask.companyId} onChange={e => setNewTask(p => ({...p, companyId: e.target.value}))} style={{ width: '100%' }}><option value="">None</option>{companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
             <div><label style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Priority</label><select value={newTask.priority} onChange={e => setNewTask(p => ({...p, priority: e.target.value as Priority}))} style={{ width: '100%' }}>{(['critical','high','medium','low'] as Priority[]).map(p => <option key={p} value={p}>{p}</option>)}</select></div>
           </div>
@@ -120,7 +120,7 @@ export default function Tasks() {
       {/* Task list */}
       <div>
         {filtered.map(t => {
-          const assignee = employees.find(e => e.id === t.assigneeId);
+          const assignee = team.find(e => e.id === t.assigneeId);
           const company = companies.find(c => c.id === t.companyId);
           const isOverdue = t.status !== 'done' && t.dueDate < today;
           const sc = STATUS_COLORS[t.status];

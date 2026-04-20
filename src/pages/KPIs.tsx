@@ -7,7 +7,7 @@ const CATEGORIES = ['sourcing', 'outreach', 'diligence', 'pipeline', 'productivi
 const CAT_LABELS: Record<string, string> = { sourcing: 'Sourcing', outreach: 'Outreach', diligence: 'Diligence', pipeline: 'Pipeline', productivity: 'Productivity', quality: 'Quality' };
 
 export default function KPIs() {
-  const { kpis, employees, updateKPI } = useStore();
+  const { kpis, team, updateKPI } = useStore();
   const [view, setView] = useState<'team' | 'individual'>('team');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editVal, setEditVal] = useState<number>(0);
@@ -25,7 +25,7 @@ export default function KPIs() {
     const inverse = k.name.includes('Overdue') || k.name.includes('Days in');
     const good = inverse ? k.current <= k.target : k.current >= k.target;
     const trend = k.trend.length >= 2 ? k.trend[k.trend.length - 1] - k.trend[k.trend.length - 2] : 0;
-    const emp = k.ownerId !== 'team' ? employees.find(e => e.id === k.ownerId) : null;
+    const emp = k.ownerId !== 'team' ? team.find(e => e.id === k.ownerId) : null;
 
     return (
       <div key={k.id} className="card" style={{ padding: 16 }}>
@@ -109,7 +109,7 @@ export default function KPIs() {
 
       {view === 'individual' && (
         <>
-          {employees.filter(e => e.status === 'active').map(emp => {
+          {team.filter(e => e.status === 'active').map(emp => {
             const empK = individualKpis.filter(k => k.ownerId === emp.id);
             if (empK.length === 0) return null;
             return (
