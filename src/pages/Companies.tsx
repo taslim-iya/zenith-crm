@@ -1,8 +1,9 @@
 import { useState, useMemo, useCallback, useRef } from 'react';
 import { useStore } from '../store';
-import { STAGES, SECTORS, GEOGRAPHIES, COMPANY_COLUMNS } from '../types';
+import { STAGES, SECTORS, GEOGRAPHIES, DEFAULT_COMPANY_COLUMNS } from '../types';
 import type { PipelineStage, Priority, Company } from '../types';
 import { useNavigate } from 'react-router-dom';
+import ColumnManager from '../components/ColumnManager';
 import { Search, Plus, ArrowUpDown, LayoutGrid, List, X, ChevronDown, Filter, Trash2, Eye, Columns } from 'lucide-react';
 
 const PRIORITY_COLORS: Record<Priority, { bg: string; text: string }> = {
@@ -13,7 +14,7 @@ const PRIORITY_COLORS: Record<Priority, { bg: string; text: string }> = {
 };
 
 export default function Companies() {
-  const { companies, team, brokers, updateCompany, deleteCompany, addCompany } = useStore();
+  const { companies, team, brokers, updateCompany, deleteCompany, addCompany, customColumns } = useStore();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [stageFilter, setStageFilter] = useState<string>('all');
@@ -26,7 +27,7 @@ export default function Companies() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editCell, setEditCell] = useState<{ id: string; key: string } | null>(null);
   const [editVal, setEditVal] = useState<string>('');
-  const [visibleCols, setVisibleCols] = useState<string[]>(COMPANY_COLUMNS.slice(0, 12).map(c => c.key));
+  const [visibleCols, setVisibleCols] = useState<string[]>(DEFAULT_COMPANY_COLUMNS.slice(0, 12).map(c => c.key));
   const [showColPicker, setShowColPicker] = useState(false);
   const [colWidths, setColWidths] = useState<Record<string, number>>({});
   const resizeRef = useRef<{ key: string; startX: number; startW: number } | null>(null);
@@ -60,7 +61,7 @@ export default function Companies() {
 
   const saveEdit = () => {
     if (!editCell) return;
-    const col = COMPANY_COLUMNS.find(c => c.key === editCell.key);
+    const col = DEFAULT_COMPANY_COLUMNS.find(c => c.key === editCell.key);
     let val: any = editVal;
     if (col?.type === 'number') val = Number(editVal) || 0;
     updateCompany(editCell.id, { [editCell.key]: val });
@@ -76,7 +77,7 @@ export default function Companies() {
   // Column resize
   const onMouseDown = (key: string, e: React.MouseEvent) => {
     e.preventDefault();
-    const col = COMPANY_COLUMNS.find(c => c.key === key);
+    const col = DEFAULT_COMPANY_COLUMNS.find(c => c.key === key);
     resizeRef.current = { key, startX: e.clientX, startW: colWidths[key] || col?.width || 120 };
     const onMove = (ev: MouseEvent) => {
       if (!resizeRef.current) return;
@@ -93,8 +94,11 @@ export default function Companies() {
     navigate(`/companies/${newId}`);
   };
 
+  const extraCols = customColumns.filter(c => c.table === 'companies');
+  const allColumns = [...DEFAULT_COMPANY_COLUMNS, ...extraCols.map(c => ({ key: c.key, label: c.label, width: c.width, editable: c.editable, type: c.type, options: c.options }))];
+
   const renderCell = (company: Company, colKey: string) => {
-    const col = COMPANY_COLUMNS.find(c => c.key === colKey);
+    const col = allColumns.find(c => c.key === colKey);
     const val = (company as any)[colKey];
     const isEditing = editCell?.id === company.id && editCell?.key === colKey;
 
@@ -162,19 +166,7 @@ export default function Companies() {
         <div><h1>Companies</h1><p>{filtered.length} of {companies.length} companies</p></div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={() => setView('board')} className="btn-secondary"><LayoutGrid size={14} /> Board</button>
-          <div style={{ position: 'relative' }}>
-            <button className="btn-secondary" onClick={() => setShowColPicker(!showColPicker)}><Columns size={14} /> Columns</button>
-            {showColPicker && (
-              <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: 4, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 2, padding: 12, zIndex: 50, width: 220, maxHeight: 300, overflow: 'auto' }}>
-                {COMPANY_COLUMNS.map(col => (
-                  <label key={col.key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', fontSize: 12, cursor: 'pointer' }}>
-                    <input type="checkbox" checked={visibleCols.includes(col.key)} onChange={() => setVisibleCols(prev => prev.includes(col.key) ? prev.filter(k => k !== col.key) : [...prev, col.key])} />
-                    {col.label}
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
+          <ColumnManager table="companies" defaultColumns={DEFAULT_COMPANY_COLUMNS} visibleCols={visibleCols} onVisibleColsChange={setVisibleCols} />
           <button className="btn-primary" onClick={addNew}><Plus size={14} /> Add Company</button>
         </div>
       </div>
@@ -216,7 +208,7 @@ export default function Companies() {
               <tr>
                 <th style={{ width: 30 }}><input type="checkbox" onChange={e => setSelected(e.target.checked ? new Set(filtered.map(c => c.id)) : new Set())} checked={selected.size === filtered.length && filtered.length > 0} /></th>
                 {visibleCols.map(key => {
-                  const col = COMPANY_COLUMNS.find(c => c.key === key);
+                  const col = allColumns.find(c => c.key === key);
                   if (!col) return null;
                   const w = colWidths[key] || col.width;
                   return (
@@ -237,7 +229,7 @@ export default function Companies() {
                     <input type="checkbox" checked={selected.has(c.id)} readOnly />
                   </td>
                   {visibleCols.map(key => {
-                    const col = COMPANY_COLUMNS.find(cl => cl.key === key);
+                    const col = allColumns.find(cl => cl.key === key);
                     return (
                       <td key={key} onDoubleClick={() => col?.editable && startEdit(c.id, key, (c as any)[key])} style={{ cursor: col?.editable ? 'cell' : 'default', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {renderCell(c, key)}

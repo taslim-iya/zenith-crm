@@ -149,6 +149,8 @@ export default function ImportExport() {
     const headers = Object.keys(data[0]);
     const csv = [headers.join(','), ...data.map(row => headers.map(h => { const v = String((row as any)[h] ?? ''); return v.includes(',') || v.includes('"') ? `"${v.replace(/"/g, '""')}"` : v; }).join(','))].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
+    // Track who exported what
+    store.logExport(exportType, data.length);
   };
 
   return (
