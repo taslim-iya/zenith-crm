@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { useStore } from '../store';
+import * as XLSX from 'xlsx';
 import { Upload, Download, FileText, Check, AlertTriangle, Loader2, Brain } from 'lucide-react';
 
 export default function ImportExport() {
@@ -60,6 +61,56 @@ export default function ImportExport() {
     }).filter(r => Object.values(r).some(v => v));
   };
 
+  // Shared import logic
+  const importParsed = (parsed: any[], filename: string) => {
+    setPreview(parsed.slice(0, 10));
+    setPreviewHeaders(Object.keys(parsed[0] || {}));
+
+    if (importTarget === 'companies') {
+      const count = store.bulkAddCompanies(parsed.map(r => ({
+        name: r.name || r.Name || r['Company Name'] || r['company name'] || r.company || r.Company || '',
+        sector: r.sector || r.Sector || r.industry || r.Industry || '',
+        geography: r.geography || r.Geography || r.location || r.Location || r.region || r.Region || '',
+        website: r.website || r.Website || r.url || r.URL || '',
+        description: r.description || r.Description || r.notes || r.Notes || '',
+        source: r.source || r.Source || 'Import',
+        revenue: Number(String(r.revenue || r.Revenue || r.turnover || r.Turnover || 0).replace(/[^0-9.-]/g, '')) || 0,
+        ebitda: Number(String(r.ebitda || r.EBITDA || r.Ebitda || 0).replace(/[^0-9.-]/g, '')) || 0,
+        employeeCount: Number(r.employeeCount || r.employees || r.Employees || r['Employee Count'] || r.staff || r.Staff || 0) || 0,
+        estimatedDealSize: Number(String(r.estimatedDealSize || r.dealSize || r['Deal Size'] || r.deal_size || r['Estimated Value'] || 0).replace(/[^0-9.-]/g, '')) || 0,
+        thesisFitScore: Number(r.thesisFitScore || r.fit || r['Thesis Fit'] || r.thesis_fit || 0) || 0,
+        priority: (['critical', 'high', 'medium', 'low'].includes(String(r.priority || r.Priority || '').toLowerCase()) ? String(r.priority || r.Priority).toLowerCase() : 'medium') as any,
+        notes: r.notes || r.Notes || '',
+        tags: typeof r.tags === 'string' ? r.tags.split(/[,;]/).map((t: string) => t.trim()).filter(Boolean) : Array.isArray(r.tags) ? r.tags : [],
+      })));
+      setImportResult(`Successfully imported ${count} companies from ${filename}.`);
+    } else {
+      const count = store.bulkAddBrokers(parsed.map(r => ({
+        name: r.name || r.Name || r.contact || r.Contact || r['Contact Name'] || '',
+        firm: r.firm || r.Firm || r.company || r.Company || r['Company Name'] || '',
+        email: r.email || r.Email || r['Email Address'] || '',
+        phone: r.phone || r.Phone || r.telephone || r.Telephone || '',
+        website: r.website || r.Website || r.url || '',
+        specialty: r.specialty || r.Specialty || r.sector || r.Sector || '',
+        geography: r.geography || r.Geography || r.location || r.Location || '',
+        notes: r.notes || r.Notes || '',
+        qualityRating: Number(r.qualityRating || r.rating || r.Rating || r.Quality || 3) || 3,
+      })));
+      setImportResult(`Successfully imported ${count} brokers from ${filename}.`);
+    }
+    setImporting(false);
+  };
+
+  // Parse Excel/XLSX/XLS files
+  const parseExcel = (buffer: ArrayBuffer): any[] => {
+    try {
+      const wb = XLSX.read(buffer, { type: 'array' });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+      return rows as any[];
+    } catch { return []; }
+  };
+
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -67,62 +118,42 @@ export default function ImportExport() {
     setImportResult('');
     setPreview([]);
 
+    const isExcel = /\.(xlsx?|xls)$/i.test(file.name);
+
+    if (isExcel) {
+      // Read as binary for Excel
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        const buffer = ev.target?.result as ArrayBuffer;
+        let parsed = parseExcel(buffer);
+        if (parsed.length === 0) {
+          setImportResult('Could not parse Excel file. Check the format.');
+          setImporting(false);
+          return;
+        }
+        importParsed(parsed, file.name);
+      };
+      reader.readAsArrayBuffer(file);
+      if (fileRef.current) fileRef.current.value = '';
+      return;
+    }
+
+    // Text-based files (CSV, JSON, TSV, TXT)
     const reader = new FileReader();
     reader.onload = async (ev) => {
       const text = ev.target?.result as string;
 
       // Try AI parsing first
       let parsed = await aiParse(text, file.name);
-
       // Fallback to manual
-      if (parsed.length === 0) {
-        parsed = manualParse(text, file.name);
-      }
+      if (parsed.length === 0) parsed = manualParse(text, file.name);
 
       if (parsed.length === 0) {
-        setImportResult('Could not parse any records from this file. Try CSV or JSON format.');
+        setImportResult('Could not parse any records from this file. Try CSV, JSON, or Excel format.');
         setImporting(false);
         return;
       }
-
-      // Show preview
-      setPreview(parsed.slice(0, 10));
-      setPreviewHeaders(Object.keys(parsed[0] || {}));
-
-      // Import
-      if (importTarget === 'companies') {
-        const count = store.bulkAddCompanies(parsed.map(r => ({
-          name: r.name || r.Name || r['Company Name'] || r.company || '',
-          sector: r.sector || r.Sector || r.industry || '',
-          geography: r.geography || r.Geography || r.location || r.region || '',
-          website: r.website || r.Website || r.url || '',
-          description: r.description || r.Description || r.notes || '',
-          source: r.source || r.Source || 'Import',
-          revenue: Number(r.revenue || r.Revenue || r.turnover || 0) || 0,
-          ebitda: Number(r.ebitda || r.EBITDA || 0) || 0,
-          employeeCount: Number(r.employeeCount || r.employees || r.Employees || r.staff || 0) || 0,
-          estimatedDealSize: Number(r.estimatedDealSize || r.dealSize || r.deal_size || 0) || 0,
-          thesisFitScore: Number(r.thesisFitScore || r.fit || r.thesis_fit || 0) || 0,
-          priority: (['critical', 'high', 'medium', 'low'].includes(r.priority) ? r.priority : 'medium') as any,
-          notes: r.notes || r.Notes || '',
-          tags: typeof r.tags === 'string' ? r.tags.split(/[,;]/).map((t: string) => t.trim()).filter(Boolean) : [],
-        })));
-        setImportResult(`Successfully imported ${count} companies.`);
-      } else {
-        const count = store.bulkAddBrokers(parsed.map(r => ({
-          name: r.name || r.Name || r.contact || '',
-          firm: r.firm || r.Firm || r.company || r.Company || '',
-          email: r.email || r.Email || '',
-          phone: r.phone || r.Phone || '',
-          website: r.website || r.Website || '',
-          specialty: r.specialty || r.Specialty || r.sector || '',
-          geography: r.geography || r.Geography || r.location || '',
-          notes: r.notes || r.Notes || '',
-          qualityRating: Number(r.qualityRating || r.rating || 3) || 3,
-        })));
-        setImportResult(`Successfully imported ${count} brokers.`);
-      }
-      setImporting(false);
+      importParsed(parsed, file.name);
     };
     reader.readAsText(file);
     if (fileRef.current) fileRef.current.value = '';

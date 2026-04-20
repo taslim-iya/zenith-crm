@@ -115,7 +115,7 @@ export default function KPIs() {
             return (
               <div key={emp.id} style={{ marginBottom: 24 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--bg-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>{emp.avatar}</div>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--bg-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>{emp.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}</div>
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 700 }}>{emp.name}</div>
                     <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{emp.title}</div>
