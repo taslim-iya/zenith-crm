@@ -59,7 +59,7 @@ export default function CompanyDetail() {
           <h1 style={{ marginBottom: 6 }}>{company.name}</h1>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             {company.geography && <span style={{ fontSize: 12, color: 'var(--text-2)', display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={12} />{company.geography}</span>}
-            {company.sector && <span style={{ fontSize: 12, color: 'var(--text-2)', display: 'flex', alignItems: 'center', gap: 4 }}><Building2 size={12} />{company.sector === 'Other' && company.customSector ? `Other: ${company.customSector}` : company.sector}{company.sicCodes ? ` (SIC: ${company.sicCodes})` : ''}</span>}
+            {company.sector && <span style={{ fontSize: 12, color: 'var(--text-2)', display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}><Building2 size={12} />{company.sector === 'Other' && company.customSector ? `Other: ${company.customSector}` : company.sector}{company.subSector ? ` / ${company.subSector}` : ''}{company.sicCodes ? <span style={{ fontFamily: 'monospace', fontSize: 10, color: 'var(--text-3)', marginLeft: 4 }}>[SIC: {company.sicCodes}]</span> : ''}</span>}
             {company.website && <a href={company.website.startsWith('http') ? company.website : `https://${company.website}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: 'var(--blue)', display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}><Globe size={12} />{company.website}</a>}
           </div>
           {company.createdBy && <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 4 }}>Added by {company.createdBy} on {company.createdAt}</div>}
