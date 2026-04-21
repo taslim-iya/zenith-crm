@@ -18,6 +18,7 @@ export default function Companies() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [stageFilter, setStageFilter] = useState<string>('all');
+  const [otherSectorModal, setOtherSectorModal] = useState<{ companyId: string; customSector: string; sicCodes: string } | null>(null);
   const [sectorFilter, setSectorFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [ownerFilter, setOwnerFilter] = useState<string>('all');
@@ -64,6 +65,20 @@ export default function Companies() {
     const col = DEFAULT_COMPANY_COLUMNS.find(c => c.key === editCell.key);
     let val: any = editVal;
     if (col?.type === 'number') val = Number(editVal) || 0;
+    // If sector changed to "Other", open the detail modal
+    if (editCell.key === 'sector' && val === 'Other') {
+      const comp = companies.find(c => c.id === editCell.id);
+      setOtherSectorModal({ companyId: editCell.id, customSector: comp?.customSector || '', sicCodes: comp?.sicCodes || '' });
+      updateCompany(editCell.id, { sector: 'Other' });
+      setEditCell(null);
+      return;
+    }
+    // If sector changed away from "Other", clear custom fields
+    if (editCell.key === 'sector' && val !== 'Other') {
+      updateCompany(editCell.id, { sector: val, customSector: '', sicCodes: '' });
+      setEditCell(null);
+      return;
+    }
     updateCompany(editCell.id, { [editCell.key]: val });
     setEditCell(null);
   };
@@ -117,6 +132,10 @@ export default function Companies() {
     if (colKey === 'name') return <div style={{ fontWeight: 600, cursor: 'pointer' }} onClick={() => navigate(`/companies/${company.id}`)}>{val || '-'}</div>;
     if (colKey === 'stage') { const si = STAGES.find(s => s.key === val); return <span className="badge" style={{ background: `${si?.color}18`, color: si?.color, cursor: col?.editable ? 'pointer' : undefined }} onClick={() => col?.editable && startEdit(company.id, colKey, val)}>{si?.label || val}</span>; }
     if (colKey === 'priority') { const pc = PRIORITY_COLORS[val as Priority]; return pc ? <span className="badge" style={{ background: pc.bg, color: pc.text, cursor: 'pointer' }} onClick={() => startEdit(company.id, colKey, val)}>{val}</span> : <span>{val}</span>; }
+    if (colKey === 'sector' && val === 'Other') {
+      const label = company.customSector ? `Other: ${company.customSector}` : 'Other';
+      return <span style={{ fontSize: 12, cursor: 'pointer', color: 'var(--blue)' }} onClick={() => setOtherSectorModal({ companyId: company.id, customSector: company.customSector || '', sicCodes: company.sicCodes || '' })} title={company.sicCodes ? `SIC: ${company.sicCodes}` : 'Click to add industry details'}>{label}</span>;
+    }
     if (colKey === 'thesisFitScore') return <span style={{ fontWeight: 700, color: val >= 8 ? 'var(--green)' : val >= 6 ? 'var(--yellow)' : val > 0 ? 'var(--text-3)' : undefined }}>{val > 0 ? `${val}/10` : '-'}</span>;
     if (['revenue', 'ebitda', 'estimatedDealSize'].includes(colKey)) return <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{fmt(val)}</span>;
     if (colKey === 'tags') return <span style={{ fontSize: 10 }}>{Array.isArray(val) ? val.join(', ') : val}</span>;
@@ -148,7 +167,7 @@ export default function Companies() {
                 {sc.map(c => (
                   <div key={c.id} className="card" style={{ padding: 12, marginBottom: 6, cursor: 'pointer' }} onClick={() => navigate(`/companies/${c.id}`)}>
                     <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{c.name}</div>
-                    <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{c.sector} - {c.geography}</div>
+                    <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{c.sector === 'Other' && c.customSector ? `Other: ${c.customSector}` : c.sector} - {c.geography}</div>
                     {c.revenue > 0 && <div style={{ fontSize: 10, color: 'var(--text-2)', marginTop: 4 }}>{fmt(c.revenue)} rev - Fit: {c.thesisFitScore}/10</div>}
                   </div>
                 ))}
@@ -241,6 +260,56 @@ export default function Companies() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Other Sector Detail Modal */}
+      {otherSectorModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={e => { if (e.target === e.currentTarget) setOtherSectorModal(null); }}>
+          <div className="card" style={{ width: 480, maxWidth: '95vw', boxShadow: '0 8px 30px rgba(0,0,0,0.15)' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontFamily: 'var(--font-serif, Georgia, serif)' }}>Industry Details</h3>
+              <button onClick={() => setOtherSectorModal(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', padding: 4 }}><X size={16} /></button>
+            </div>
+            <div style={{ padding: 20 }}>
+              <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 16 }}>
+                Describe the industry for this company and add SIC codes for classification.
+              </p>
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4, color: 'var(--text-2)' }}>Industry Description</label>
+                <input
+                  value={otherSectorModal.customSector}
+                  onChange={e => setOtherSectorModal(p => p ? { ...p, customSector: e.target.value } : p)}
+                  placeholder="e.g. Vertical SaaS for Veterinary Clinics"
+                  style={{ width: '100%', padding: '8px 10px', fontSize: 13 }}
+                  autoFocus
+                />
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4, color: 'var(--text-2)' }}>SIC Codes</label>
+                <input
+                  value={otherSectorModal.sicCodes}
+                  onChange={e => setOtherSectorModal(p => p ? { ...p, sicCodes: e.target.value } : p)}
+                  placeholder="e.g. 6201, 6202, 7490"
+                  style={{ width: '100%', padding: '8px 10px', fontSize: 13, fontFamily: 'monospace' }}
+                />
+                <p style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 4 }}>Comma-separated UK SIC codes. Find codes at <a href="https://resources.companieshouse.gov.uk/sic/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--blue)' }}>Companies House SIC lookup</a></p>
+              </div>
+            </div>
+            <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button className="btn-secondary" onClick={() => setOtherSectorModal(null)}>Cancel</button>
+              <button className="btn-primary" onClick={() => {
+                if (otherSectorModal) {
+                  updateCompany(otherSectorModal.companyId, {
+                    sector: 'Other',
+                    customSector: otherSectorModal.customSector,
+                    sicCodes: otherSectorModal.sicCodes,
+                  });
+                  setOtherSectorModal(null);
+                }
+              }}>Save</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

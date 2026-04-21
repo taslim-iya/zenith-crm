@@ -36,6 +36,7 @@ export interface ResearchItem {
 
 export interface Company {
   id: string; name: string; sector: string; subSector: string; geography: string;
+  customSector: string; sicCodes: string;
   website: string; description: string; source: string;
   status: 'active' | 'inactive' | 'acquired' | 'passed'; stage: PipelineStage;
   revenue: number; ebitda: number; employeeCount: number; estimatedDealSize: number;

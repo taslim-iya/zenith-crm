@@ -245,6 +245,8 @@ export const useStore = create<ZenithStore>()(
         if (state && !state.customColumns) state.customColumns = [];
         if (state && !state.userAccess) state.userAccess = [];
         if (state && !state.adminPassword) state.adminPassword = 'zenith2026';
+        // Backfill customSector/sicCodes on companies
+        if (state?.companies) state.companies.forEach((c: any) => { if (!c.customSector) c.customSector = ''; if (!c.sicCodes) c.sicCodes = ''; });
       },
     }
   )
