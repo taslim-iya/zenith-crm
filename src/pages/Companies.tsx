@@ -246,7 +246,10 @@ export default function Companies() {
                   {visibleCols.map(key => {
                     const col = allColumns.find(cl => cl.key === key);
                     return (
-                      <td key={key} onDoubleClick={() => col?.editable && startEdit(c.id, key, (c as any)[key])} style={{ cursor: col?.editable ? 'cell' : 'default', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <td key={key} onDoubleClick={() => {
+                        if (key === 'sector') { setSectorModal({ companyId: c.id, sector: c.sector || '', subSector: c.subSector || '', customSector: c.customSector || '', sicCodes: c.sicCodes || '' }); return; }
+                        col?.editable && startEdit(c.id, key, (c as any)[key]);
+                      }} style={{ cursor: col?.editable ? 'cell' : 'default', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {renderCell(c, key)}
                       </td>
                     );
