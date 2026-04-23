@@ -281,6 +281,11 @@ export const useStore = create<ZenithStore>()(
               useStore.setState(merged);
             }
             markRemoteLoaded();
+
+            // Push current state to Supabase (ensures localStorage-only data gets synced)
+            const final = useStore.getState();
+            const { companies, team, brokers, tasks, kpis, activities, research, customColumns, userAccess, darkMode, adminPassword, currentUserId } = final;
+            saveRemoteState({ companies, team, brokers, tasks, kpis, activities, research, customColumns, userAccess, darkMode, adminPassword, currentUserId });
           } catch {
             markRemoteLoaded();
           }

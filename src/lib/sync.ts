@@ -37,15 +37,24 @@ export function saveRemoteState(state: Record<string, any>) {
   }, 2000);
 }
 
-// Remote wins for all collections
+// Merge by ID: combines local + remote, remote wins on conflicts
+function mergeArraysById(local: any[], remote: any[]): any[] {
+  const map = new Map<string, any>();
+  for (const item of local) if (item?.id) map.set(item.id, item);
+  for (const item of remote) if (item?.id) map.set(item.id, item); // remote overwrites
+  return Array.from(map.values());
+}
+
 export function mergeState(local: Record<string, any>, remote: Record<string, any>): Record<string, any> {
   const merged: Record<string, any> = { ...local };
 
   const collections = ['companies', 'team', 'brokers', 'tasks', 'kpis', 'activities', 'research', 'customColumns', 'userAccess'];
 
   for (const key of collections) {
-    if (remote[key] && Array.isArray(remote[key]) && remote[key].length > 0) {
-      merged[key] = remote[key];
+    const l = Array.isArray(local[key]) ? local[key] : [];
+    const r = Array.isArray(remote[key]) ? remote[key] : [];
+    if (r.length > 0 || l.length > 0) {
+      merged[key] = mergeArraysById(l, r);
     }
   }
 
