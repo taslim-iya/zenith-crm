@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Company, TeamMember, Broker, Task, KPI, ActivityLog, ChatMessage, PipelineStage, Interaction, DocFile, ResearchItem, CustomColumn, UserAccess, AccessLevel } from './types';
+import { loadRemoteState, saveRemoteState, mergeState, markRemoteLoaded } from './lib/sync';
 
 let _c = 0;
 export const id = () => `z${Date.now().toString(36)}${(++_c).toString(36)}`;
@@ -255,16 +256,42 @@ export const useStore = create<ZenithStore>()(
     {
       name: 'zenith-store',
       storage: safeStorage,
-      onRehydrate: () => (state) => {
-        if (state?.darkMode) document.documentElement.classList.add('dark');
-        // Backfill new fields
-        if (state && !state.research) state.research = [];
-        if (state && !state.customColumns) state.customColumns = [];
-        if (state && !state.userAccess) state.userAccess = [];
-        if (state && !state.adminPassword) state.adminPassword = 'zenith2026';
-        // Backfill customSector/sicCodes on companies
-        if (state?.companies) state.companies.forEach((c: any) => { if (!c.customSector) c.customSector = ''; if (!c.sicCodes) c.sicCodes = ''; });
+      onRehydrate: () => {
+        // After localStorage rehydration, fetch remote and merge
+        setTimeout(async () => {
+          try {
+            const local = useStore.getState();
+            // Backfill new fields
+            if (!local.research) useStore.setState({ research: [] });
+            if (!local.customColumns) useStore.setState({ customColumns: [] });
+            if (!local.userAccess) useStore.setState({ userAccess: [] });
+            if (!local.adminPassword) useStore.setState({ adminPassword: 'zenith2026' });
+            if (local.darkMode) document.documentElement.classList.add('dark');
+            // Backfill customSector/sicCodes on companies
+            if (local.companies) {
+              const patched = local.companies.map((c: any) => ({ ...c, customSector: c.customSector || '', sicCodes: c.sicCodes || '' }));
+              useStore.setState({ companies: patched });
+            }
+
+            // Load remote state from Supabase
+            const remote = await loadRemoteState();
+            if (remote) {
+              const updated = useStore.getState();
+              const merged = mergeState(updated as any, remote);
+              useStore.setState(merged);
+            }
+            markRemoteLoaded();
+          } catch {
+            markRemoteLoaded();
+          }
+        }, 500);
       },
     }
   )
 );
+
+// Subscribe to changes and sync to Supabase (debounced)
+useStore.subscribe((state) => {
+  const { companies, team, brokers, tasks, kpis, activities, research, customColumns, userAccess, darkMode, adminPassword, currentUserId } = state;
+  saveRemoteState({ companies, team, brokers, tasks, kpis, activities, research, customColumns, userAccess, darkMode, adminPassword, currentUserId });
+});
