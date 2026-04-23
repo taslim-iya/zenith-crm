@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Building2, Users, Briefcase, BarChart3, MessageSquare, CheckSquare, Upload, Settings, Moon, Sun, BookOpen, Shield } from 'lucide-react';
+import { LayoutDashboard, Building2, Users, Briefcase, BarChart3, MessageSquare, CheckSquare, Upload, Settings, Moon, Sun, BookOpen, Shield, Menu, X } from 'lucide-react';
 import { useStore } from '../store';
 
 const nav = [
@@ -19,6 +20,7 @@ const nav = [
 export default function Sidebar() {
   const location = useLocation();
   const { darkMode, toggleDark, companies, tasks, team, currentUserId, canAccess } = useStore();
+  const [moreOpen, setMoreOpen] = useState(false);
   const today = new Date().toISOString().split('T')[0];
   const overdue = tasks.filter(t => t.status !== 'done' && t.dueDate && t.dueDate < today).length;
   const active = companies.filter(c => c.status === 'active').length;
@@ -26,11 +28,8 @@ export default function Sidebar() {
   const isAdmin = currentMember?.role === 'admin';
 
   const visibleNav = nav.filter(item => {
-    // Settings and Team Portal: admin only
     if (item.module === 'settings' || item.module === 'teamPortal') return isAdmin;
-    // If no user selected yet, show everything
     if (!currentUserId) return true;
-    // Check RBAC
     const access = canAccess(currentUserId, item.module);
     return access !== 'none';
   });
@@ -69,13 +68,14 @@ export default function Sidebar() {
         </nav>
 
         <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 10, color: 'var(--text-3)' }}>v1.1</span>
+          <span style={{ fontSize: 10, color: 'var(--text-3)' }}>v1.2</span>
           <button onClick={toggleDark} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text-3)' }}>{darkMode ? <Sun size={14} /> : <Moon size={14} />}</button>
         </div>
       </aside>
 
-      <div className="mobile-nav" style={{ display: 'none', position: 'fixed', bottom: 0, left: 0, right: 0, background: 'var(--surface)', borderTop: '1px solid var(--border)', zIndex: 100, justifyContent: 'space-around', padding: '6px 0' }}>
-        {visibleNav.slice(0, 5).map(item => {
+      {/* Mobile bottom nav */}
+      <div className="mobile-nav" style={{ display: 'none', position: 'fixed', bottom: 0, left: 0, right: 0, background: 'var(--surface)', borderTop: '1px solid var(--border)', zIndex: 100, justifyContent: 'space-around', padding: '6px 0 max(6px, env(safe-area-inset-bottom))' }}>
+        {visibleNav.slice(0, 4).map(item => {
           const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
           return (
             <NavLink key={item.path} to={item.path} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, textDecoration: 'none', color: isActive ? 'var(--text)' : 'var(--text-3)', fontSize: 9, fontWeight: isActive ? 600 : 400 }}>
@@ -83,7 +83,41 @@ export default function Sidebar() {
             </NavLink>
           );
         })}
+        <button onClick={() => setMoreOpen(!moreOpen)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, background: 'none', border: 'none', cursor: 'pointer', color: moreOpen ? 'var(--text)' : 'var(--text-3)', fontSize: 9, fontWeight: moreOpen ? 600 : 400 }}>
+          <Menu size={18} />More
+        </button>
       </div>
+
+      {/* Mobile "More" slide-up */}
+      {moreOpen && (
+        <div className="mobile-nav" style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+          <div style={{ flex: 1 }} onClick={() => setMoreOpen(false)} />
+          <div style={{ background: 'var(--surface)', borderTop: '1px solid var(--border)', borderRadius: '16px 16px 0 0', maxHeight: '70vh', overflowY: 'auto', padding: '12px 0 max(12px, env(safe-area-inset-bottom))' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 20px 12px', borderBottom: '1px solid var(--border)' }}>
+              <span style={{ fontFamily: 'var(--serif)', fontSize: 16, fontWeight: 700 }}>All Pages</span>
+              <button onClick={() => setMoreOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}><X size={18} color="var(--text-3)" /></button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2, padding: '8px 12px' }}>
+              {visibleNav.map(item => {
+                const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
+                return (
+                  <NavLink key={item.path} to={item.path} onClick={() => setMoreOpen(false)}
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '14px 8px', borderRadius: 8, textDecoration: 'none', background: isActive ? 'rgba(184,134,11,0.08)' : 'transparent' }}>
+                    <item.icon size={20} color={isActive ? 'var(--pri)' : 'var(--text-2)'} />
+                    <span style={{ fontSize: 10, fontWeight: isActive ? 700 : 500, color: isActive ? 'var(--pri)' : 'var(--text-2)', textAlign: 'center', lineHeight: 1.2 }}>{item.label}</span>
+                  </NavLink>
+                );
+              })}
+            </div>
+            <div style={{ padding: '8px 16px', borderTop: '1px solid var(--border)', marginTop: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <button onClick={toggleDark} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--text-2)' }}>
+                {darkMode ? <Sun size={14} /> : <Moon size={14} />} {darkMode ? 'Light' : 'Dark'} Mode
+              </button>
+              {currentMember && <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{currentMember.name}{isAdmin ? ' · Admin' : ''}</span>}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
