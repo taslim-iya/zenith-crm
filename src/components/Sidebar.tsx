@@ -8,7 +8,7 @@ const nav = [
   { path: '/companies', icon: Building2, label: 'Companies', module: 'companies' },
   { path: '/team', icon: Users, label: 'Team', module: 'team' },
   { path: '/brokers', icon: Briefcase, label: 'Brokers', module: 'brokers' },
-  { path: '/research', icon: BookOpen, label: 'Research', module: 'research' },
+  { path: '/research', icon: BookOpen, label: 'Industry Research', module: 'research' },
   { path: '/kpis', icon: BarChart3, label: 'KPIs', module: 'kpis' },
   { path: '/chat', icon: MessageSquare, label: 'AI Chat', module: 'chat' },
   { path: '/tasks', icon: CheckSquare, label: 'Tasks', module: 'tasks' },

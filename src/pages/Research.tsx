@@ -2,9 +2,26 @@ import { useState, useMemo } from 'react';
 import { useStore } from '../store';
 import { SECTORS, RESEARCH_TYPES, DEFAULT_RESEARCH_COLUMNS } from '../types';
 import type { ResearchItem } from '../types';
-import { Plus, X, Edit2, Search, ExternalLink, FileText, Folder, Link2 } from 'lucide-react';
+import { Plus, X, Edit2, Search, ExternalLink, FileText, Folder, Link2, Star } from 'lucide-react';
 
 const TYPE_ICONS: Record<string, string> = { industry_report: '\uD83D\uDCCA', market_map: '\uD83D\uDDFA\uFE0F', thesis_note: '\uD83D\uDCDD', competitor_analysis: '\u2694\uFE0F', financial_model: '\uD83D\uDCC8', other: '\uD83D\uDCC1' };
+
+function StarRating({ value, onChange, readonly }: { value: number; onChange?: (v: number) => void; readonly?: boolean }) {
+  return (
+    <div style={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+      {[1, 2, 3, 4, 5].map(i => (
+        <button
+          key={i}
+          onClick={() => !readonly && onChange?.(value === i ? 0 : i)}
+          style={{ background: 'none', border: 'none', cursor: readonly ? 'default' : 'pointer', padding: 0, lineHeight: 1 }}
+          title={readonly ? `${value}/5` : value === i ? 'Clear rating' : `Rate ${i}/5`}
+        >
+          <Star size={14} fill={i <= value ? '#B8860B' : 'none'} color={i <= value ? '#B8860B' : 'var(--text-3)'} strokeWidth={1.5} />
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export default function Research() {
   const { research, addResearch, updateResearch, removeResearch, customColumns } = useStore();
@@ -13,7 +30,7 @@ export default function Research() {
   const [search, setSearch] = useState('');
   const [sectorFilter, setSectorFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
-  const [form, setForm] = useState({ title: '', sector: '', type: 'industry_report', url: '', description: '', tags: '' });
+  const [form, setForm] = useState({ title: '', sector: '', type: 'industry_report', url: '', description: '', tags: '', rating: 0 });
 
   const extraCols = customColumns.filter(c => c.table === 'research');
 
@@ -30,12 +47,12 @@ export default function Research() {
     const data = { ...form, tags: form.tags.split(',').map(t => t.trim()).filter(Boolean) };
     if (editId) { updateResearch(editId, data); setEditId(null); }
     else { addResearch(data); }
-    setForm({ title: '', sector: '', type: 'industry_report', url: '', description: '', tags: '' });
+    setForm({ title: '', sector: '', type: 'industry_report', url: '', description: '', tags: '', rating: 0 });
     setShowAdd(false);
   };
 
   const startEdit = (r: ResearchItem) => {
-    setForm({ title: r.title, sector: r.sector, type: r.type, url: r.url, description: r.description, tags: r.tags.join(', ') });
+    setForm({ title: r.title, sector: r.sector, type: r.type, url: r.url, description: r.description, tags: r.tags.join(', '), rating: r.rating || 0 });
     setEditId(r.id); setShowAdd(true);
   };
 
@@ -46,7 +63,7 @@ export default function Research() {
     <div style={{ padding: '32px 40px', maxWidth: 1200 }}>
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <div><h1>Industry Research</h1><p>{research.length} reports and documents</p></div>
-        <button className="btn-primary" onClick={() => { setShowAdd(!showAdd); setEditId(null); setForm({ title: '', sector: '', type: 'industry_report', url: '', description: '', tags: '' }); }}><Plus size={14} /> Add Research</button>
+        <button className="btn-primary" onClick={() => { setShowAdd(!showAdd); setEditId(null); setForm({ title: '', sector: '', type: 'industry_report', url: '', description: '', tags: '', rating: 0 }); }}><Plus size={14} /> Add Research</button>
       </div>
 
       {showAdd && (
@@ -59,6 +76,7 @@ export default function Research() {
             <Fl label="Type"><select value={form.type} onChange={e => setForm(p => ({...p, type: e.target.value}))} style={{ width: '100%' }}>{RESEARCH_TYPES.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}</select></Fl>
             <Fl label="Description"><textarea value={form.description} onChange={e => setForm(p => ({...p, description: e.target.value}))} rows={2} style={{ width: '100%' }} placeholder="Brief summary..." /></Fl>
             <Fl label="Tags (comma-separated)"><input value={form.tags} onChange={e => setForm(p => ({...p, tags: e.target.value}))} placeholder="ETA, SME, PE" style={{ width: '100%' }} /></Fl>
+            <Fl label="Industry Rating"><StarRating value={form.rating} onChange={v => setForm(p => ({...p, rating: v}))} /></Fl>
           </div>
           <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
             <button className="btn-primary" onClick={handleSave}>{editId ? 'Save' : 'Add'}</button>
@@ -92,6 +110,7 @@ export default function Research() {
               <th style={{ width: 30 }}></th>
               {DEFAULT_RESEARCH_COLUMNS.map(col => <th key={col.key} style={{ width: col.width }}>{col.label}</th>)}
               {extraCols.map(col => <th key={col.id} style={{ width: col.width }}>{col.label}</th>)}
+              <th style={{ width: 80 }}>Rating</th>
               <th style={{ width: 60 }}>Actions</th>
             </tr></thead>
             <tbody>
@@ -107,6 +126,7 @@ export default function Research() {
                     <td style={{ fontSize: 12, maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.description || '-'}</td>
                     <td style={{ fontSize: 11, color: 'var(--text-3)' }}>{r.addedBy || '-'}</td>
                     <td style={{ fontSize: 11, color: 'var(--text-3)' }}>{r.createdAt}</td>
+                    <td><StarRating value={r.rating || 0} onChange={v => updateResearch(r.id, { rating: v })} /></td>
                     {extraCols.map(col => <td key={col.id} style={{ fontSize: 12 }}>{(r as any)[col.key] || '-'}</td>)}
                     <td>
                       <div style={{ display: 'flex', gap: 4 }}>

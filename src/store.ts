@@ -205,7 +205,7 @@ export const useStore = create<ZenithStore>()(
         addResearch: (item) => {
           const newId = id();
           set(s => ({
-            research: [...s.research, { id: newId, title: '', sector: '', type: 'other', url: '', description: '', tags: [], addedBy: getUser()?.name || 'System', createdAt: now(), updatedAt: now(), ...item } as ResearchItem],
+            research: [...s.research, { id: newId, title: '', sector: '', type: 'other', url: '', description: '', tags: [], rating: 0, addedBy: getUser()?.name || 'System', createdAt: now(), updatedAt: now(), ...item } as ResearchItem],
             activities: [log('research_added', `Added research: ${item.title || 'untitled'}`, newId, 'research'), ...s.activities].slice(0, 500),
           }));
           return newId;

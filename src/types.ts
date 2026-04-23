@@ -28,6 +28,7 @@ export interface ResearchItem {
   url: string;
   description: string;
   tags: string[];
+  rating: number; // 0-5 industry rating
   addedBy: string;
   createdAt: string;
   updatedAt: string;
