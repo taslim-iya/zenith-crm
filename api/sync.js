@@ -4,33 +4,31 @@ const BUCKET = 'cetac';
 const FILE = 'zenith-state.json';
 
 module.exports = async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method === 'OPTIONS') return res.status(200).end();
+  try {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const headers = {
-    'apikey': SB_KEY,
-    'Authorization': 'Bearer ' + SB_KEY,
-  };
+    if (!SB_KEY) return res.status(500).json({ error: 'SUPABASE_SERVICE_KEY not set' });
 
-  if (req.method === 'GET') {
-    try {
-      const r = await fetch(SB_URL + '/storage/v1/object/' + BUCKET + '/' + FILE, {
-        headers: headers,
-      });
-      if (!r.ok) return res.json({ state: null });
+    const headers = {
+      'apikey': SB_KEY,
+      'Authorization': 'Bearer ' + SB_KEY,
+    };
+
+    if (req.method === 'GET') {
+      const r = await fetch(SB_URL + '/storage/v1/object/' + BUCKET + '/' + FILE, { headers });
+      if (!r.ok) {
+        const txt = await r.text();
+        return res.json({ state: null, debug: { status: r.status, body: txt.slice(0, 200) } });
+      }
       const state = await r.json();
       return res.json({ state });
-    } catch (e) {
-      return res.json({ state: null, error: String(e) });
     }
-  }
 
-  if (req.method === 'POST') {
-    try {
+    if (req.method === 'POST') {
       const body = JSON.stringify(req.body);
-      // Try PUT first (update existing), fall back to POST (create new)
       const r = await fetch(SB_URL + '/storage/v1/object/' + BUCKET + '/' + FILE, {
         method: 'PUT',
         headers: Object.assign({}, headers, { 'Content-Type': 'application/json' }),
@@ -48,10 +46,10 @@ module.exports = async function handler(req, res) {
         }
       }
       return res.json({ ok: true });
-    } catch (e) {
-      return res.status(500).json({ error: String(e) });
     }
-  }
 
-  return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ error: 'Method not allowed' });
+  } catch (e) {
+    return res.status(500).json({ error: String(e), stack: e.stack });
+  }
 };
