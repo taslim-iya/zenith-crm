@@ -19,6 +19,9 @@ export default function App() {
       <div style={{ display: 'flex', minHeight: '100vh' }}>
         <Sidebar />
         <main style={{ flex: 1, overflow: 'auto', minHeight: '100vh' }}>
+          <div id="zenith-storage-warn" style={{ display: 'none', padding: '10px 16px', background: '#fef2f2', borderBottom: '1px solid #fecaca', color: '#dc2626', fontSize: 12, fontWeight: 600, alignItems: 'center', gap: 8 }}>
+            ⚠️ Storage limit reached — data may not persist after refresh. Export your data now from Import/Export page.
+          </div>
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/companies" element={<Companies />} />

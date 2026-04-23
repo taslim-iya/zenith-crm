@@ -1,7 +1,32 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useStore } from '../store';
 import * as XLSX from 'xlsx';
-import { Upload, Download, FileText, Check, AlertTriangle, Loader2, Brain } from 'lucide-react';
+import { Upload, Download, FileText, Check, AlertTriangle, Loader2, Brain, HardDrive } from 'lucide-react';
+
+function StorageDiag() {
+  const { companies, brokers, team } = useStore();
+  const [storeSize, setStoreSize] = useState('');
+  useEffect(() => {
+    const raw = localStorage.getItem('zenith-store');
+    setStoreSize(raw ? `${(raw.length / 1024).toFixed(0)} KB` : '0 KB');
+  }, [companies.length, brokers.length]);
+  const maxKB = 5120; // ~5MB
+  const usedKB = Number(storeSize.replace(/[^0-9]/g, '')) || 0;
+  const pct = Math.min(100, (usedKB / maxKB) * 100);
+  return (
+    <div style={{ padding: '10px 14px', background: pct > 80 ? '#fef2f2' : 'var(--bg-2)', border: `1px solid ${pct > 80 ? '#fecaca' : 'var(--border)'}`, borderRadius: 6, marginBottom: 16, fontSize: 11 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+        <HardDrive size={12} />
+        <span style={{ fontWeight: 600 }}>Storage: {storeSize} / ~5 MB</span>
+        <span style={{ color: 'var(--text-3)' }}>({companies.length} companies, {brokers.length} brokers, {team.length} team)</span>
+      </div>
+      <div style={{ height: 4, background: 'var(--border)', borderRadius: 2, overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${pct}%`, background: pct > 80 ? '#dc2626' : pct > 60 ? '#ca8a04' : 'var(--accent)', transition: 'width 0.3s' }} />
+      </div>
+      {pct > 80 && <div style={{ color: '#dc2626', marginTop: 4, fontWeight: 600 }}>⚠️ Storage nearly full — large imports may fail. Export data as backup.</div>}
+    </div>
+  );
+}
 
 export default function ImportExport() {
   const store = useStore();
@@ -198,6 +223,7 @@ export default function ImportExport() {
 
       {tab === 'import' && (
         <div>
+          <StorageDiag />
           <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'pointer', padding: '6px 12px', border: `1px solid ${importTarget === 'companies' ? 'var(--text)' : 'var(--border)'}`, borderRadius: 2, fontWeight: importTarget === 'companies' ? 700 : 400 }}>
               <input type="radio" name="target" checked={importTarget === 'companies'} onChange={() => setImportTarget('companies')} /> Companies
@@ -241,6 +267,7 @@ export default function ImportExport() {
 
       {tab === 'export' && (
         <div>
+          <StorageDiag />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12, marginBottom: 24 }}>
             {[
               { key: 'companies', label: 'Companies', desc: `${store.companies.length} records` },

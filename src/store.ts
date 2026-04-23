@@ -1,11 +1,27 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Company, TeamMember, Broker, Task, KPI, ActivityLog, ChatMessage, PipelineStage, Interaction, DocFile, ResearchItem, CustomColumn, UserAccess, AccessLevel } from './types';
 
 let _c = 0;
 export const id = () => `z${Date.now().toString(36)}${(++_c).toString(36)}`;
 const now = () => new Date().toISOString().split('T')[0];
 const nowFull = () => new Date().toISOString();
+
+// Storage wrapper that detects localStorage quota errors
+const safeStorage = createJSONStorage(() => ({
+  getItem: (key: string) => localStorage.getItem(key),
+  setItem: (key: string, value: string) => {
+    try {
+      localStorage.setItem(key, value);
+    } catch (e: any) {
+      console.error('[Zenith] localStorage write failed:', e?.name, '| size:', (value.length / 1024).toFixed(0) + 'KB');
+      // Show user-facing warning
+      const banner = document.getElementById('zenith-storage-warn');
+      if (banner) banner.style.display = 'flex';
+    }
+  },
+  removeItem: (key: string) => localStorage.removeItem(key),
+}));
 
 interface ZenithStore {
   companies: Company[];
@@ -238,6 +254,7 @@ export const useStore = create<ZenithStore>()(
     },
     {
       name: 'zenith-store',
+      storage: safeStorage,
       onRehydrate: () => (state) => {
         if (state?.darkMode) document.documentElement.classList.add('dark');
         // Backfill new fields
